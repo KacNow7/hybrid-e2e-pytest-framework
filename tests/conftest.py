@@ -23,20 +23,34 @@ def driver(request):
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--window-size=1920,1080")
     
-    driver = webdriver.Chrome(options=options)
+    # Przełącznik środowiska (Lokalnie vs Docker)
+    execution_env = os.getenv("EXECUTION_ENV")
+    
+    if execution_env == "docker":
+        # Łączymy się z kontenerem Selenium (Remote WebDriver)
+        selenium_host = os.getenv("SELENIUM_HOST", "localhost")
+        driver = webdriver.Remote(
+            command_executor=f"http://{selenium_host}:4444/wd/hub",
+            options=options
+        )
+    else:
+        # Standardowe uruchomienie lokalne
+        driver = webdriver.Chrome(options=options)
+        
     driver.implicitly_wait(5)
     
     yield driver
     
+    # Robienie zrzutu ekranu w przypadku błędu
     if request.node.rep_call.failed:
         allure.attach(
             driver.get_screenshot_as_png(),
             name="Screenshot_on_failure",
             attachment_type=allure.attachment_type.PNG
         )
+    
     driver.quit()
 
-# Fixtura API: Tworzy dane przed testem i SPRZĄTA po nim
 @pytest.fixture
 def create_test_booking():
     api_url = os.getenv("API_BASE_URL")

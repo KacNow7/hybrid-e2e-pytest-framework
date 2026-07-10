@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  # Serwer przeglądarki Chrome
+  selenium-hub:
+    image: selenium/standalone-chrome:latest
+    container_name: qa-browser
+    ports:
+      - "4444:4444" # Port komunikacji WebDrivera
+      - "7900:7900" # Podgląd na żywo
+    shm_size: '2gb' # Zwiększenie pamięci współdzielonej
+
+  # Testy
+  qa-tests:
+    build: .
+    container_name: qa-runner
+    depends_on:
+      - selenium-hub # Testy ruszą dopiero, gdy przeglądarka będzie gotowa
+    environment:
+      - EXECUTION_ENV=docker
+      - SELENIUM_HOST=selenium-hub
+    volumes:
+      - ./.allure_results:/app/.allure_results
